@@ -1,0 +1,14 @@
+# Ignore all files within bin/ & Keep the bin/ directory itself
+bin/*
+!bin/.gitkeep
+
+# Ignore vpsim-qemu.so shared object && Ignore all files generated after each simulation run
+lib/qemu/*.so
+GPP/dt/*dts
+GPP/dt/*dtb
+GPP/disk_images/*.link
+GPP/disk_images/*.qcow2
+GPP/linux/*.link
+Python/Libs/__pycache__/*
+Python/Platforms/__pycache__/*
+SESAM_userspace/sesam
