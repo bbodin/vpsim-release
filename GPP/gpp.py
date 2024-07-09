@@ -74,8 +74,7 @@ conf = {
             'base': 0xa200000,
             'size': 0x1000,
             'irq': 42,
-            'ip': '192.168.0.0/24',
-            'hostfwd_ssh_port': 2222, # Connect to this port to access VM via SSH.
+            'ip': '192.168.0.0/24'
         },
     ],
 

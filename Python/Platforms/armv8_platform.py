@@ -480,7 +480,7 @@ class FullSystem(System):
                     value='virtio-net-device,netdev=%s' % (net['name']))
                 ModelProviderParam2(provider=provider.name,
                     option='-netdev',
-                    value='user,net=%s,id=%s,hostfwd=tcp::2222-:22' % (net['ip'],net['name']))
+                    value='user,net=%s,id=%s' % (net['ip'],net['name']))
 
             # tap mode network
             if 'tap' in net:
