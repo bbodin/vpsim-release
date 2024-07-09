@@ -25,10 +25,12 @@ To set-up the full VPSim environment, please refer to the parent repository: [VP
 
 ## Installation
 
-To have the full release, you need to have the two main binaries:
-   - `vpsim` binary
-   - `vpsim-qemu.so` shared library of the modified QEMU compatible with VPSim.
-If not already done, please follow the steps in the parent repo README.
+If not already done, please follow the steps in the parent repo README to install the VPSIM binaries.
+If the installation runs properly, you should have the main compilation targets:
+
+- `vpsim-release/bin/vpsim` the main application binary.
+- `vpsim-release/lib/qemu/vpsim-qemu.so` shared library of the modified QEMU compatible with VPSim.
+
 
 ### Requirements
 - You will need to install `dtc` device tree compiler:
@@ -36,11 +38,11 @@ If not already done, please follow the steps in the parent repo README.
     ```sh
     apt install device-tree-compiler
     ```
+Once the package has been properly installed, be sure to have it available and if not, add the path of the dtc executables (something like `.../dtb/usr/bin`) to your `PATH` environment variable.
 
 ### Configure
-Once you realized the steps in the parent README, you can verify the existence of these two main targets as follows:
- - `vpsim` -> "vpsim_release/bin/"
- - `qemu-system-aarch64` renamed to `vpsim-qemu.so` -> "vpsim_release/lib/qemu/"
+Once you verified the existence of these two main compilation targets, you need to configure your environment variables. This is done, depending on your own shell, by sourcing from the `vpsim-release` folder either the (`setup.sh`) bash script or the (`setup.csh`) csh script.
+
 
 1. Configure environment variables by sourcing the (`setup.sh`) script:
 
@@ -58,7 +60,7 @@ Once you realized the steps in the parent README, you can verify the existence o
 VPSim provides a user-friendly interface to compose and build virtual platforms using an in-house DomainSpecific Language (DSL) based on Python. The tool takes as input a high-level platform description (Python script) together with
 the software binaries to be executed on the virtual platform.
 
-1. Move to ([./GPP](./GPP)) directory and check your configuration file. Now you are good to run your first simulation:
+1. Move to ([vpsim-release/GPP](./GPP)) directory and run your first simulation:
 
     ```sh
     python3 gpp.py
@@ -75,5 +77,4 @@ the software binaries to be executed on the virtual platform.
     - Dive in `gpp.py` to see how to customize your own architecture
 
 ## Getting to know more about VPSim
-- To have an idea of what you can do with VPSim, please follow the `README.md` file in the following sub-directory:
-  - [./GPP](./GPP)
+For further examples and to know more about VPSim, please check the `README.md` file in the [vpsim-release/GPP](./GPP) folder.
