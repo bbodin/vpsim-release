@@ -478,9 +478,14 @@ class FullSystem(System):
                 ModelProviderParam2(provider=provider.name,
                     option='-device',
                     value='virtio-net-device,netdev=%s' % (net['name']))
-                ModelProviderParam2(provider=provider.name,
-                    option='-netdev',
-                    value='user,net=%s,id=%s,hostfwd=tcp::2222-:22' % (net['ip'],net['name']))
+                if 'hostfwd_ssh_port' not in net:
+                    ModelProviderParam2(provider=provider.name,
+                        option='-netdev',
+                        value='user,net=%s,id=%s' % (net['ip'],net['name']))
+                else:
+                    ModelProviderParam2(provider=provider.name,
+                        option='-netdev',
+                        value='user,net=%s,id=%s,hostfwd=tcp::%s-:22' % (net['ip'],net['name'],net['hostfwd_ssh_port']))
 
             # tap mode network
             if 'tap' in net:
@@ -673,7 +678,7 @@ class FullSystem(System):
             os.system('ln -sf %s %s'%(
                 os.path.join(os.environ['VPSIM_HOME'],'GPP','disk_images', 'busybox.qcow2'),os.path.join(os.environ['VPSIM_HOME'],'GPP','disk_images', 'disk_image.link'),))
             os.system('ln -sf %s %s'%(
-                os.path.join(os.environ['VPSIM_HOME'],'GPP','linux', 'linux-4.20.17'),os.path.join(os.environ['VPSIM_HOME'],'GPP','linux', 'linux.link'),))
+                os.path.join(os.environ['VPSIM_HOME'],'GPP','linux', 'linux-6.1.44'),os.path.join(os.environ['VPSIM_HOME'],'GPP','linux', 'linux.link'),))
         else :
             raise Exception("Software mode should be one of: minimal")
 
