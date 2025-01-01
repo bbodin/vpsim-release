@@ -111,7 +111,8 @@ conf = {
     },
 
     'memory_subsystem': {
-        'simulate': False,
+        'simulate': True,
+        'focus_on_roi': True,
         'enable_coherence': True,
         'cache': {
             'l1-data': {

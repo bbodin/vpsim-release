@@ -292,6 +292,8 @@ class FullSystem(System):
             main_memory=SystemCCosim(
                 n_out_ports=len(self.cluster.cores)
             )
+            if 'focus_on_roi' in conf['memory_subsystem']:
+                provider.roi_only = main_memory.roi_only = conf['memory_subsystem']['focus_on_roi']
             # Interleave default enabled
             step_interleave = 0 #disable interleave
             if 'with-interleave' not in conf['memory_subsystem']['off-chip-memory'] or conf['memory_subsystem']['off-chip-memory']['with-interleave']:
