@@ -37,6 +37,7 @@ conf = {
             # CPUs in cluster, NoC position (X,Y)
             # Filled automatically hereafter (lines 180-191)
         ],
+        'quantum': 65535,
     },
 
     'ram': [

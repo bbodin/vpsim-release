@@ -39,6 +39,9 @@ class Armv8Cluster:
         self.q.path = model_provider['path']
         self.q.io_poll_period=1000
 
+        if 'quantum' in conf['cpu']:
+            self.q.quantum = conf['cpu']['quantum']
+
         # Initialize QEMU
         ModelProviderParam2(provider=self.q.name, option='--accel', value='tcg,thread=single')
         ModelProviderParam2(provider=self.q.name, option='-icount', value='0')
