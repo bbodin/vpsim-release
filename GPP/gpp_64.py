@@ -38,6 +38,7 @@ conf = {
             # Filled automatically hereafter (lines 180-191)
         ],
         'quantum': 65535,
+        'conversion_factor': 3.0, # example: cpu_frequency = 3.0 GHz & IPC = 1
     },
 
     'ram': [

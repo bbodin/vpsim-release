@@ -41,6 +41,7 @@ conf = {
             ([3], (1,1)),
         ],
         'quantum': 65535,
+        'conversion_factor': 3.0, # example: cpu_frequency = 3.0 GHz & IPC = 1
     },
 
     'ram': [

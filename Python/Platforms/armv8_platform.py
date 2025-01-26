@@ -42,6 +42,9 @@ class Armv8Cluster:
         if 'quantum' in conf['cpu']:
             self.q.quantum = conf['cpu']['quantum']
 
+        if 'conversion_factor' in conf['cpu']:
+            self.q.conversion_factor = conf['cpu']['conversion_factor']
+
         # Initialize QEMU
         ModelProviderParam2(provider=self.q.name, option='--accel', value='tcg,thread=single')
         ModelProviderParam2(provider=self.q.name, option='-icount', value='0')
