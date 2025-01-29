@@ -142,6 +142,12 @@ conf = {
                 'latency-ns': 2,
                 'home-node-size': 2048*1024,
                 'inclusion-l2': 'Exclusive', # Can be Exclusive, Inclusive, or NINE
+
+                # SLC interleaving is enabled by default
+                # L3 cache line size is the default interleaving step
+                # interleave_step = 0 will disable SLC interleaving
+                'interleave_step' : 64,
+
                 'home-nodes': [
                     # Base address, size, NoC position (X,Y)
                     (0x40000000, 0x40000000, (0,0)),
@@ -166,6 +172,11 @@ conf = {
         'off-chip-memory': {
             'read-latency-ns': 20,
             'write-latency-ns': 1,
+
+            # Memory interleaving is enabled by default
+            # The default memory interleave step is equal to L3 line size
+            # interleave_step = 0 will disable Memory interleaving
+            'interleave_step' : 64,
 
             # For now we only support the same width for all memories
             'channel-width': 16, # bytes

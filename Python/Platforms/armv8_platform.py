@@ -164,7 +164,6 @@ class NodeCluster:
                                               flitSize=0,
                                               memory_word_length=0,
                                               is_coherent=conf['memory_subsystem']['enable_coherence'],
-                                              interleave_length=0,
                                               is_mesh = False,
                                               noc_stats_per_initiator_on = False,
                                               mesh_x = 0,
@@ -187,7 +186,6 @@ class NodeCluster:
                                               flitSize=0,
                                               memory_word_length=0,
                                               is_coherent=conf['memory_subsystem']['enable_coherence'],
-                                              interleave_length=0,
                                               is_mesh = False,
                                               noc_stats_per_initiator_on = False,
                                               mesh_x = 0,
@@ -300,10 +298,6 @@ class FullSystem(System):
             )
             if 'focus_on_roi' in conf['memory_subsystem']:
                 provider.roi_only = main_memory.roi_only = conf['memory_subsystem']['focus_on_roi']
-            # Interleave default enabled
-            step_interleave = 0 #disable interleave
-            if 'with-interleave' not in conf['memory_subsystem']['off-chip-memory'] or conf['memory_subsystem']['off-chip-memory']['with-interleave']:
-                step_interleave = conf['memory_subsystem']['cache']['l3']['line-size']
             # Create IOAccess Notifier
             nb_iodevs=0
             if ('IODevs' in conf['memory_subsystem']) and (len(conf['memory_subsystem']['IODevs'])>0):
@@ -324,7 +318,6 @@ class FullSystem(System):
                                          flitSize=conf['memory_subsystem']['noc']['flit-size'],
                                          memory_word_length=conf['memory_subsystem']['off-chip-memory']['channel-width'] * conf['memory_subsystem']['off-chip-memory']['channels'],
                                          is_coherent = conf['memory_subsystem']['enable_coherence'],
-                                         interleave_length = step_interleave,
                                          is_mesh = True,
                                          noc_stats_per_initiator_on = conf['memory_subsystem']['noc']['diagnosis'],
                                          mesh_x = conf['memory_subsystem']['noc']['x-nodes'],
@@ -335,6 +328,17 @@ class FullSystem(System):
                                          contention_interval = conf['memory_subsystem']['noc']['contention-interval-ns'],
                                          buffer_size = conf['memory_subsystem']['noc']['buffer-size-flits'],
                                          virtual_channels = conf['memory_subsystem']['noc']['virtual-channels'])
+            # Memory Interleave default enabled
+            if 'interleave_step' in conf['memory_subsystem']['off-chip-memory']:
+                mem_noc.memory_interleave_length = conf['memory_subsystem']['off-chip-memory']['interleave_step']
+            else:
+                mem_noc.memory_interleave_length = conf['memory_subsystem']['cache']['l3']['line-size']
+            # SLC Interleave default enabled
+            if 'interleave_step' in conf['memory_subsystem']['cache']['l3']:
+                slc_interleave_step = conf['memory_subsystem']['cache']['l3']['interleave_step']
+            else:
+                slc_interleave_step = conf['memory_subsystem']['cache']['l3']['line-size']
+            mem_noc.slc_interleave_length = slc_interleave_step
 
             # Connect ioaccess notifier to NoC
             if nb_iodevs > 0 :
@@ -361,6 +365,9 @@ class FullSystem(System):
                 # create cluster controller
                 CacheIdController(noc=mem_noc.name, cache=Cluster.L2Cache.name, x_id=x, y_id=y)
 
+            # SLC Interleave default enabled
+            interleaved_caches = len(conf['memory_subsystem']['cache']['l3']['home-nodes'])
+            if slc_interleave_step==0: interleaved_caches = 0
             # iterate on home nodes
             for index, home_node in enumerate(conf['memory_subsystem']['cache']['l3']['home-nodes']):
                 base, size, (x, y) = home_node
@@ -383,6 +390,7 @@ class FullSystem(System):
                 llc.inclusion_higher = conf['memory_subsystem']['cache']['l3']['inclusion-l2']
                 llc.home_base_address=base
                 llc.home_size=size
+                llc.nb_interleaved_caches = interleaved_caches
 
                 # connect home caches to NoC
                 mem_noc("home_out_%s"%index) >> llc("in_data")
