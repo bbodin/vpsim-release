@@ -46,6 +46,17 @@ Following is a description of the modelled architecture (`/GPP/gpp.py`):
 
 **NOTE:** Although this mode is minimalistic, it still supports various useful applications, such as 'wget', 'ssh', 'tar', 'nano', 'gdb', etc.
 
+# Accessing the virtual platform via SSH
+- While you can do everything from the main console, you may want to share a single GPP image among several users, or simply have a better and wider display. For these cases, you may want to access the GPP using SSH.
+
+**NOTE:** This feature is disabled by default. To enable it, you need to decomment line 78 in `gpp.py`
+
+- In `gpp.py`, port 22 of the guest Linux is forwarded to port 2222 on the host machine. You may change this port in `gpp.py`, by modifying the value of `conf -> 'net' -> 'hostfwd_ssh_port'`.
+- To access the virtual platform by SSH, simply execute the following command from a new terminal:
+  ```sh
+  $ ssh root@localhost -p2222   # if using the minimal Busybox image, no password
+  ```
+
 # Benchmarking/profiling
 
 1. **Using 'perf' program**:

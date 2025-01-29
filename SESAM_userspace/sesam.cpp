@@ -22,6 +22,8 @@
 #include <fcntl.h>
 #include <string.h>
 #include <iostream>
+#include <libgen.h>  // for basename()
+#include <limits.h> // for PATH_MAX
 
 #include "sesamController.hpp"
 
@@ -29,7 +31,7 @@ using namespace std;
 
 void usage(){
   printf("Sesam user controller\n");
-  printf("v0.0.2\n");
+  printf("v0.2\n");
   printf("Usage: sesam <command> <parameter>\n");
   printf("\nCommand:\n");
   printf("    help\t\tShow this message\n");
@@ -38,6 +40,13 @@ void usage(){
   printf("    quit\t\tQuit VPSim\n");
 }
 
+bool file_exists(const char *path) {
+    return access(path, F_OK) == 0;
+}
+bool is_system_command(const char *cmd) {
+    // Check if the command is a system command in the PATH
+    return system((string("command -v ") + cmd + " >/dev/null 2>&1").c_str()) == 0;
+}
 int main(int argc, char **argv)
 {
   char cmd[20];
@@ -80,31 +89,59 @@ int main(int argc, char **argv)
     }
 
     ostringstream s;
-
     string tmp = argv[2];
-    if (tmp.substr(tmp.find_last_of(".") + 1) == "out"){
-        for (i = 3; i < argc; ++i)
-            s << argv[i] << " ";
+    bool is_local_executable = false;
+
+    // Check if the provided executable name contains a path
+    if (tmp.find('/') == string::npos) { // no path provided
+      // Check if it's a system command
+      if (!is_system_command(tmp.c_str())) {
+        // Not a system command, prepend "./" to check the current directory
+        string current_dir_app = "./" + tmp;
+        if (file_exists(current_dir_app.c_str())) {
+            tmp = current_dir_app;  // Use current directory version
+            is_local_executable = true;
+        } else {
+            printf("Application %s not found in current directory or system PATH\n", tmp.c_str());
+            exit(1);
+        }
+      } // Continue if the app is a system command
+    } else { //A path is provided with the app
+        is_local_executable = true;
+    }
+    string base_name;
+    if (is_local_executable) {
+        // Resolve the absolute path for local executables
+        char resolved_path[PATH_MAX];
+        if (realpath(tmp.c_str(), resolved_path) == NULL) {
+            perror("realpath");
+            exit(1);
+        }
+        // Extract the base name from the resolved path
+        base_name = basename(resolved_path);
+        tmp = string(resolved_path);
     } else {
-        for (i = 2; i < argc; ++i)
-            s << argv[i] << " ";
+      // command is in PATH (system comand), keep its name
+      base_name = tmp;
     }
 
-    size_t pos = tmp.find("./");
-    if (pos != string::npos){
-      tmp = tmp.substr(pos+2);
-    }
-    int n = tmp.length();
+    int n = base_name.length();
     char name[n+1];
-    strcpy(name,tmp.c_str());
+    strcpy(name, base_name.c_str());
+    // Get the app name in HOST machine
     sesam_get_name(n, name);
 
-
+    // Build the command string with absolute path and additional arguments
+    s << tmp;
+    for (int i = 3; i < argc; ++i) {
+        s << " " << argv[i];
+    }
     sesam_start_bench();
+    // Execute the command using system()
     system(s.str().c_str());
     sesam_end_bench();
-  }
-  else {
+
+  } else {
     if (argc < 3) {
       printf("Missing argument: ");
       usage();

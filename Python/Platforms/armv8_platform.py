@@ -39,6 +39,12 @@ class Armv8Cluster:
         self.q.path = model_provider['path']
         self.q.io_poll_period=1000
 
+        if 'quantum' in conf['cpu']:
+            self.q.quantum = conf['cpu']['quantum']
+
+        if 'conversion_factor' in conf['cpu']:
+            self.q.conversion_factor = conf['cpu']['conversion_factor']
+
         # Initialize QEMU
         ModelProviderParam2(provider=self.q.name, option='--accel', value='tcg,thread=single')
         ModelProviderParam2(provider=self.q.name, option='-icount', value='0')
@@ -158,7 +164,6 @@ class NodeCluster:
                                               flitSize=0,
                                               memory_word_length=0,
                                               is_coherent=conf['memory_subsystem']['enable_coherence'],
-                                              interleave_length=0,
                                               is_mesh = False,
                                               noc_stats_per_initiator_on = False,
                                               mesh_x = 0,
@@ -181,7 +186,6 @@ class NodeCluster:
                                               flitSize=0,
                                               memory_word_length=0,
                                               is_coherent=conf['memory_subsystem']['enable_coherence'],
-                                              interleave_length=0,
                                               is_mesh = False,
                                               noc_stats_per_initiator_on = False,
                                               mesh_x = 0,
@@ -292,10 +296,8 @@ class FullSystem(System):
             main_memory=SystemCCosim(
                 n_out_ports=len(self.cluster.cores)
             )
-            # Interleave default enabled
-            step_interleave = 0 #disable interleave
-            if 'with-interleave' not in conf['memory_subsystem']['off-chip-memory'] or conf['memory_subsystem']['off-chip-memory']['with-interleave']:
-                step_interleave = conf['memory_subsystem']['cache']['l3']['line-size']
+            if 'focus_on_roi' in conf['memory_subsystem']:
+                provider.roi_only = main_memory.roi_only = conf['memory_subsystem']['focus_on_roi']
             # Create IOAccess Notifier
             nb_iodevs=0
             if ('IODevs' in conf['memory_subsystem']) and (len(conf['memory_subsystem']['IODevs'])>0):
@@ -316,7 +318,6 @@ class FullSystem(System):
                                          flitSize=conf['memory_subsystem']['noc']['flit-size'],
                                          memory_word_length=conf['memory_subsystem']['off-chip-memory']['channel-width'] * conf['memory_subsystem']['off-chip-memory']['channels'],
                                          is_coherent = conf['memory_subsystem']['enable_coherence'],
-                                         interleave_length = step_interleave,
                                          is_mesh = True,
                                          noc_stats_per_initiator_on = conf['memory_subsystem']['noc']['diagnosis'],
                                          mesh_x = conf['memory_subsystem']['noc']['x-nodes'],
@@ -327,6 +328,17 @@ class FullSystem(System):
                                          contention_interval = conf['memory_subsystem']['noc']['contention-interval-ns'],
                                          buffer_size = conf['memory_subsystem']['noc']['buffer-size-flits'],
                                          virtual_channels = conf['memory_subsystem']['noc']['virtual-channels'])
+            # Memory Interleave default enabled
+            if 'interleave_step' in conf['memory_subsystem']['off-chip-memory']:
+                mem_noc.memory_interleave_length = conf['memory_subsystem']['off-chip-memory']['interleave_step']
+            else:
+                mem_noc.memory_interleave_length = conf['memory_subsystem']['cache']['l3']['line-size']
+            # SLC Interleave default enabled
+            if 'interleave_step' in conf['memory_subsystem']['cache']['l3']:
+                slc_interleave_step = conf['memory_subsystem']['cache']['l3']['interleave_step']
+            else:
+                slc_interleave_step = conf['memory_subsystem']['cache']['l3']['line-size']
+            mem_noc.slc_interleave_length = slc_interleave_step
 
             # Connect ioaccess notifier to NoC
             if nb_iodevs > 0 :
@@ -353,6 +365,9 @@ class FullSystem(System):
                 # create cluster controller
                 CacheIdController(noc=mem_noc.name, cache=Cluster.L2Cache.name, x_id=x, y_id=y)
 
+            # SLC Interleave default enabled
+            interleaved_caches = len(conf['memory_subsystem']['cache']['l3']['home-nodes'])
+            if slc_interleave_step==0: interleaved_caches = 0
             # iterate on home nodes
             for index, home_node in enumerate(conf['memory_subsystem']['cache']['l3']['home-nodes']):
                 base, size, (x, y) = home_node
@@ -375,6 +390,7 @@ class FullSystem(System):
                 llc.inclusion_higher = conf['memory_subsystem']['cache']['l3']['inclusion-l2']
                 llc.home_base_address=base
                 llc.home_size=size
+                llc.nb_interleaved_caches = interleaved_caches
 
                 # connect home caches to NoC
                 mem_noc("home_out_%s"%index) >> llc("in_data")
@@ -478,9 +494,14 @@ class FullSystem(System):
                 ModelProviderParam2(provider=provider.name,
                     option='-device',
                     value='virtio-net-device,netdev=%s' % (net['name']))
-                ModelProviderParam2(provider=provider.name,
-                    option='-netdev',
-                    value='user,net=%s,id=%s' % (net['ip'],net['name']))
+                if 'hostfwd_ssh_port' not in net:
+                    ModelProviderParam2(provider=provider.name,
+                        option='-netdev',
+                        value='user,net=%s,id=%s' % (net['ip'],net['name']))
+                else:
+                    ModelProviderParam2(provider=provider.name,
+                        option='-netdev',
+                        value='user,net=%s,id=%s,hostfwd=tcp::%s-:22' % (net['ip'],net['name'],net['hostfwd_ssh_port']))
 
             # tap mode network
             if 'tap' in net:
@@ -673,7 +694,7 @@ class FullSystem(System):
             os.system('ln -sf %s %s'%(
                 os.path.join(os.environ['VPSIM_HOME'],'GPP','disk_images', 'busybox.qcow2'),os.path.join(os.environ['VPSIM_HOME'],'GPP','disk_images', 'disk_image.link'),))
             os.system('ln -sf %s %s'%(
-                os.path.join(os.environ['VPSIM_HOME'],'GPP','linux', 'linux-4.20.17'),os.path.join(os.environ['VPSIM_HOME'],'GPP','linux', 'linux.link'),))
+                os.path.join(os.environ['VPSIM_HOME'],'GPP','linux', 'linux-6.1.44'),os.path.join(os.environ['VPSIM_HOME'],'GPP','linux', 'linux.link'),))
         else :
             raise Exception("Software mode should be one of: minimal")
 

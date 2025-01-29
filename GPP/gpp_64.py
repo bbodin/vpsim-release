@@ -37,6 +37,8 @@ conf = {
             # CPUs in cluster, NoC position (X,Y)
             # Filled automatically hereafter (lines 180-191)
         ],
+        'quantum': 65535,
+        'conversion_factor': 3.0, # example: cpu_frequency = 3.0 GHz & IPC = 1
     },
 
     'ram': [
@@ -71,7 +73,8 @@ conf = {
             'base': 0xa200000,
             'size': 0x1000,
             'irq': 42,
-            'ip': '192.168.0.0/24'
+            'ip': '192.168.0.0/24',
+            #'hostfwd_ssh_port': 2222, # Decomment this to Host-forward Port to access VM via SSH.
         },
     ],
 
@@ -107,7 +110,8 @@ conf = {
     },
 
     'memory_subsystem': {
-        'simulate': False,
+        'simulate': True,
+        'focus_on_roi': True,
         'enable_coherence': True,
         'cache': {
             'l1-data': {
@@ -135,6 +139,12 @@ conf = {
                 'latency-ns': 10,
                 'home-node-size': 2048*1024,
                 'inclusion-l2': 'Exclusive', # Can be Exclusive, Inclusive, or NINE
+
+                # SLC interleaving is enabled by default
+                # L3 cache line size is the default interleaving step
+                # interleave_step = 0 will disable SLC interleaving
+                'interleave_step' : 64,
+
                 'home-nodes': [
                     # Base address, size, NoC position (X,Y)
                     # Filled automatically hereafter (lines 194-214)
@@ -156,6 +166,11 @@ conf = {
         'off-chip-memory': {
             'read-latency-ns': 20,
             'write-latency-ns': 1,
+
+            # Memory interleaving is enabled by default
+            # The default memory interleave step is equal to L3 line size
+            # interleave_step = 0 will disable Memory interleaving
+            'interleave_step' : 64,
 
             # For now we only support the same width for all memories
             'channel-width': 16, # bytes
