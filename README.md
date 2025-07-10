@@ -33,10 +33,10 @@ If the installation runs properly, you should have the main compilation targets:
 
 
 ### Requirements
-- You will need to install `dtc` device tree compiler:
+- You will need to install `dtc` device tree compiler and `zip`:
 
     ```sh
-    apt install device-tree-compiler
+    apt install device-tree-compiler zip
     ```
 Once the package has been properly installed, be sure to have it available and if not, add the path of the dtc executables (something like `.../dtb/usr/bin`) to your `PATH` environment variable.
 
