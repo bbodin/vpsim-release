@@ -337,6 +337,8 @@ class System:
                 outdev=subprocess.DEVNULL
         else: outdev=None
         try:
+            print (f"working_dir is {working_dir}")
+            print ("Running command:",[_ve, '--run', 'tmp.xml'])
             p=subprocess.Popen([_ve, '--run', 'tmp.xml'],
                 cwd=working_dir,stdout=outdev,stderr=outdev, )
             try:

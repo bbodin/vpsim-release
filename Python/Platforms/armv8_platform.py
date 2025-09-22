@@ -655,48 +655,33 @@ class FullSystem(System):
                         value='file=%s,if=pflash,aio=threads,format=raw' % fl['img'])
 
         # Platform should be fully constructed now, load binary images !
-        # if conf['software']['mode'] in ['custom', 'full'] :
-            # os.system('ln -sf %s %s'%(
-            #     os.path.join(os.environ['VPSIM_HOME'],'GPP','disk_images', 'debian.qcow2'), os.path.join(os.environ['VPSIM_HOME'],'GPP','disk_images', 'disk_image.link'),))
-            # os.system('ln -sf %s %s'%(
-            #     os.path.join(os.environ['VPSIM_HOME'],'GPP','linux','vmlinuz-5.2.19'), os.path.join(os.environ['VPSIM_HOME'],'GPP','linux', 'linux.link'),))
-            # if 'rootfs' not in conf['software']:
-            #     conf['software']['rootfs']={}
-            #     conf['software']['rootfs']['path'] = os.path.join(os.environ['VPSIM_HOME'],'GPP','linux','initrd.img-5.2.19')
-            # if 'bootargs' not in conf['software']['kernel']:
-            #     conf['software']['kernel']['bootargs'] = 'root=/dev/vda3'
-            # else:
-            #     conf['software']['kernel']['bootargs'] += 'root=/dev/vda3'
+        if conf['software']['mode'] in ['custom', 'full'] :
+            def load(sw_part):
+                load_addr=sw_part['addr']
+                success=False
+                for space in ram_spaces:
+                    base=space.base_address
+                    size=space.size
+                    if load_addr >= base and load_addr < base+size:
+                        # load image here
+                        BlobLoader(
+                            target_memory=space.name,
+                            file=sw_part['path'],
+                            offset=load_addr-base)
+                        success=True
+                        break
+                return success
 
-            # def load(sw_part):
-            #     load_addr=sw_part['addr']
-            #     success=False
-            #     for space in ram_spaces:
-            #         base=space.base_address
-            #         size=space.size
-            #         if load_addr >= base and load_addr < base+size:
-            #             # load image here
-            #             BlobLoader(
-            #                 target_memory=space.name,
-            #                 file=sw_part['path'],
-            #                 offset=load_addr-base)
-            #             success=True
-            #             break
-            #     return success
-
-            # if 'bin' in conf['software']:
-            #     for bin in conf['software']['bin']:
-            #         assert(load(bin))
-            # if 'elf' in conf['software']:
-            #     for elf in conf['software']['elf']:
-            #         ElfLoader(path=elf)
-        if conf['software']['mode']  == 'minimal':
-            os.system('ln -sf %s %s'%(
-                os.path.join(os.environ['VPSIM_HOME'],'GPP','disk_images', 'busybox.qcow2'),os.path.join(os.environ['VPSIM_HOME'],'GPP','disk_images', 'disk_image.link'),))
-            os.system('ln -sf %s %s'%(
-                os.path.join(os.environ['VPSIM_HOME'],'GPP','linux', 'linux-6.1.44'),os.path.join(os.environ['VPSIM_HOME'],'GPP','linux', 'linux.link'),))
+            if 'bin' in conf['software']:
+                for bin in conf['software']['bin']:
+                    assert(load(bin))
+            if 'elf' in conf['software']:
+                for elf in conf['software']['elf']:
+                    ElfLoader(path=elf)
+        elif conf['software']['mode']  == 'minimal':
+            pass
         else :
-            raise Exception("Software mode should be one of: minimal")
+            raise Exception("Software mode should be one of: minimal or full")
 
         if 'dtb' in conf['software'] and conf['software']['dtb'] is not None:
             ModelProviderParam2(provider=provider.name, option='-dtb', value=conf['software']['dtb']['path'])
