@@ -1,5 +1,6 @@
 #!/bin/bash
-VPSIM_HOME=$(pwd)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VPSIM_HOME=$SCRIPT_DIR
 
 # Unzip the busybox disk image if not already done
 if [ ! -e "$VPSIM_HOME/GPP/disk_images/busybox.qcow2" ]; then
