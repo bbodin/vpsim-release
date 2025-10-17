@@ -66,7 +66,7 @@ conf = {
            'base': 0xa100000,
            'size': 0x1000,
            'irq': 40,
-           'image': os.path.join(gpp_home, 'disk_images', "disk_image.link"),
+           'image': os.path.join(gpp_home, 'disk_images', "busybox.qcow2"),
         },
     ],
 
@@ -105,7 +105,7 @@ conf = {
        },
 
        'kernel': {
-           'path': os.path.join(gpp_home, 'linux', 'linux.link'),
+           'path': os.path.join(gpp_home, 'linux', 'linux-6.1.44'),
            'bootargs': 'console=ttyAMA0 earlycon root=/dev/vda uio_pdrv_genirq.of_id=generic-uio ip=dhcp',
        },
 
@@ -196,8 +196,8 @@ conf = {
     'log_file': os.path.join(os.environ['VPSIM_HOME'],'bin','log.txt'),
 }
 
-if __name__ == '__main__':
-    # Build the config
+def main () :
+ # Build the config
     sys = FullSystem(conf)
     # Run simulation
     stats = sys.build(simulate=True,wait=True,silent=False,)
@@ -216,3 +216,5 @@ if __name__ == '__main__':
                     instr += int(stats[component][stat][0])
         print("Total executed instructions: %s" % instr)
 
+if __name__ == '__main__':
+    main()

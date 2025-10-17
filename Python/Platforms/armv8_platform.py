@@ -51,6 +51,7 @@ class Armv8Cluster:
         ModelProviderParam1(provider=self.q.name, option='-nographic')
         ModelProviderParam2(provider=self.q.name, option='-machine', value='qslave')
         ModelProviderParam2(provider=self.q.name, option='-monitor', value='none')
+        ModelProviderParam1(provider=self.q.name, option='-semihosting')
 
         self.dt = dt.DevTree(conf['platform_name'],conf['device_tree_template'])
 
