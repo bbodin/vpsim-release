@@ -32,6 +32,10 @@
 #define SESAMOP_START_BENCH     0x52
 #define SESAMOP_END_BENCH       0x54
 #define SESAMOP_LIST            0x20
+#define SESAMOP_CLEAN_PARAMS    0x58
+#define SESAMOP_START_PARAM     0x62
+#define SESAMOP_END_PARAM       0x72
+#define SESAMOP_EXECUTE_PARAMS  0x78
 
 void sesam_quit() {
   *((uint8_t *)(sesam_mem)) = SESAMOP_QUIT;
@@ -70,27 +74,27 @@ void sesam_end_bench(){
 }
 
 void sesam_get_name(int n, char name[30]) {
-  *((uint8_t *)(sesam_mem)) = 0x58;
-  *((uint8_t *)(sesam_mem)) = 0x62;
+  *((uint8_t *)(sesam_mem)) = SESAMOP_CLEAN_PARAMS;
+  *((uint8_t *)(sesam_mem)) = SESAMOP_START_PARAM;
   for (int i = 0; i < n; i++) {
     *((uint8_t *)(sesam_mem + 1)) = name[i];
   }
-  *((uint8_t *)(sesam_mem)) = 0x72;
+  *((uint8_t *)(sesam_mem)) = SESAMOP_END_PARAM;
 }
 
 void sesam_exec_command(int nb_param, char parameter[10][30]) {
-  *((uint8_t *)(sesam_mem)) = 0x58;
+  *((uint8_t *)(sesam_mem)) = SESAMOP_CLEAN_PARAMS;
   for (int i = 0; i < nb_param; ++i) {
     int j = 0;
-    *((uint8_t *)(sesam_mem)) = 0x62;
+    *((uint8_t *)(sesam_mem)) = SESAMOP_START_PARAM;
 
     while (parameter[i][j] != '\0') {
       *((uint8_t *)(sesam_mem + 1)) = parameter[i][j];
       ++j;
     }
-    *((uint8_t *)(sesam_mem)) = 0x72;
+    *((uint8_t *)(sesam_mem)) = SESAMOP_END_PARAM;
   }
-  *((uint8_t *)(sesam_mem)) = 0x78;
+  *((uint8_t *)(sesam_mem)) = SESAMOP_EXECUTE_PARAMS;
 }
 
 #endif // __SESAM_H__

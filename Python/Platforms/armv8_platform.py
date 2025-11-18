@@ -426,7 +426,8 @@ class FullSystem(System):
                 sysbus >> r
             provider.notify_ioaccess=False
         sysbus.n_out_ports += 1
-        sysbus >> Monitor(size=4, base_address=conf['sesam_monitor_addr'])
+
+        sysbus >> Monitor(size=4, base_address=conf['sesam_monitor_addr'], log_directory=conf["vpsim_log_directory"])
 
         ModelProviderParam2(provider=provider.name,
             option='-m',

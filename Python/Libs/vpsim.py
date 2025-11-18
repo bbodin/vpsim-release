@@ -469,13 +469,13 @@ class %s(_ssmip):
     def __init__(self,name=None,sys=None,**X):
         if name is None:
             name=self.__class__.__name__+str(_autn[self.__class__.__name__])
-            _autn[self.__class__.__name__]+=1
+            _autn[self.__class__.__name__]+=1%s
         _ssmip.__init__(self,name,X,sys)
         self._ka=%s
         self._mo=%s
         self._mi=%s
 
-%s
+
   """
 for _l in subprocess.check_output([_ve,'--dump-components'],stderr=subprocess.STDOUT).decode().split('\n'):
 
@@ -485,7 +485,10 @@ for _l in subprocess.check_output([_ve,'--dump-components'],stderr=subprocess.ST
             classname=g[1]
         elif g[0] == "optional_attr":
             ka.append(g[1])
-            code+="""\n        setattr(self,\"%s\",\"%s\")"""%(g[1],g[2])
+            if len(g) < 3  :
+                code+="""\n        setattr(self,\"%s\",\"%s\")"""%(g[1],'')
+            else :
+                code+="""\n        setattr(self,\"%s\",\"%s\")"""%(g[1],g[2])
         elif g[0] == "required_attr":
             ka.append(g[1])
         elif g[0] == "in_ports":
@@ -493,8 +496,8 @@ for _l in subprocess.check_output([_ve,'--dump-components'],stderr=subprocess.ST
         elif g[0] == "out_prts":
             mo=int(g[1])
         elif g[0] == "end_component":
-            #print(t%(classname,ka,mo,mi,code))
-            exec(t%(classname,ka,mo,mi,code))
+            #print(t%(classname,code,ka,mo,mi))
+            exec(t%(classname,code,ka,mo,mi))
             _autn[classname]=0
             ka=[]
             mo,mi=-1,-1
