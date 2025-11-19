@@ -19,7 +19,8 @@ from vpsim import ModelProvider, ModelProviderCpu, ModelProviderDev, ModelProvid
 from vpsim import PL011Uart, XuartPs, Monitor, PythonDevice, Cache, NoCMemoryController, CacheController, CacheIdController, CoherentInterconnect
 from vpsim import SystemCCosim, IOAccessCosim, NoCDeviceController
 import getpass, os, math
-
+from datetime import datetime
+import threading
 import dt
 
 VPSIM_HOME = os.getenv('VPSIM_HOME')
@@ -55,12 +56,12 @@ class Armv8Cluster:
 
         self.dt = dt.DevTree(conf['platform_name'],conf['device_tree_template'])
 
-        if conf['log_execution']:
+        if 'execution_trace' in conf["monitoring"] and conf["monitoring"]['execution_trace']:
+            trace_file = conf["monitoring"]['execution_trace']
             ModelProviderParam2(provider=self.q.name, option='-d', value='mmu,in_asm,int,guest_errors')
-            if 'log_file' in conf:
-                ModelProviderParam2(provider=self.q.name, option='-D', value=conf['log_file'])
+            ModelProviderParam2(provider=self.q.name, option='-D', value=trace_file)
 
-        if conf['gdb_port'] is not None:
+        if conf["monitoring"]['gdb_port'] is not None:
             ModelProviderParam1(provider=self.q.name, option='-S',)
             ModelProviderParam2(provider=self.q.name, option='-gdb',
                 value='tcp::%s' % conf['gdb_port'])
@@ -427,7 +428,9 @@ class FullSystem(System):
             provider.notify_ioaccess=False
         sysbus.n_out_ports += 1
 
-        sysbus >> Monitor(size=4, base_address=conf['sesam_monitor_addr'], log_directory=conf["vpsim_log_directory"])
+
+        sysbus >> Monitor(size=4, base_address=conf["monitoring"]['sesam_monitor_addr'], 
+                                  log_directory=conf['monitoring']['log_directory'] )
 
         ModelProviderParam2(provider=provider.name,
             option='-m',
@@ -693,8 +696,28 @@ class FullSystem(System):
         if 'bootargs' in conf['software']['kernel']:
             ModelProviderParam2(provider=provider.name, option='-append', value=conf['software']['kernel']['bootargs'])
 
-        # Enable per-component logging
-        self.addParam(Param("log", "enable"))
+        dateTime = datetime.now().isoformat(timespec='seconds')
+        working_dir='.%s%s--%s' % (self.name, dateTime, threading.current_thread().ident)
+
+        log_directory = None
+        execution_trace = None 
+        logging_value = "disabled"
+
+        if conf["monitoring"]["log_level"] :
+            logging_value = "enabled"
+            if int(conf["monitoring"]["log_level"]) :
+                logging_value = int(conf["monitoring"]["log_level"]) 
+        
+        if conf["monitoring"]["log_directory"] :
+            log_directory = conf["monitoring"]["log_directory"]
+            
+        if conf["monitoring"]["execution_trace"] :
+            execution_trace = conf["monitoring"]["execution_trace"]
+
+        self.addParam(Param("log_level",logging_value)) 
+        self.addParam(Param("execution_trace", execution_trace))
+        self.addParam(Param("log_directory", log_directory))
+
 
         # Generate device tree
         self.dt.make()
