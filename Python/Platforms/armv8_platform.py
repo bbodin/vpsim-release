@@ -56,8 +56,8 @@ class Armv8Cluster:
 
         self.dt = dt.DevTree(conf['platform_name'],conf['device_tree_template'])
 
-        if 'execution_trace' in conf["monitoring"] and conf["monitoring"]['execution_trace']:
-            trace_file = conf["monitoring"]['execution_trace']
+        if 'qemu_execution_trace' in conf["monitoring"] and conf["monitoring"]['qemu_execution_trace']:
+            trace_file = conf["monitoring"]['qemu_execution_trace']
             ModelProviderParam2(provider=self.q.name, option='-d', value='mmu,in_asm,int,guest_errors')
             ModelProviderParam2(provider=self.q.name, option='-D', value=trace_file)
 
@@ -430,7 +430,7 @@ class FullSystem(System):
 
 
         sysbus >> Monitor(size=4, base_address=conf["monitoring"]['sesam_monitor_addr'], 
-                                  log_directory=conf['monitoring']['log_directory'] )
+                                  log_directory=conf['monitoring']['sesam_monitor_log_directory'] )
 
         ModelProviderParam2(provider=provider.name,
             option='-m',
@@ -699,24 +699,23 @@ class FullSystem(System):
         dateTime = datetime.now().isoformat(timespec='seconds')
         working_dir='.%s%s--%s' % (self.name, dateTime, threading.current_thread().ident)
 
-        log_directory = None
+        stats_file = None
         execution_trace = None 
         logging_value = "disabled"
 
-        if conf["monitoring"]["log_level"] :
+        if conf["monitoring"]["vpsim_log_level"] :
             logging_value = "enabled"
-            if int(conf["monitoring"]["log_level"]) :
-                logging_value = int(conf["monitoring"]["log_level"]) 
+            if int(conf["monitoring"]["vpsim_log_level"]) :
+                logging_value = int(conf["monitoring"]["vpsim_log_level"]) 
         
-        if conf["monitoring"]["log_directory"] :
-            log_directory = conf["monitoring"]["log_directory"]
+        if conf["monitoring"]["vpsim_stats_file"] :
+            stats_file = conf["monitoring"]["vpsim_stats_file"]
             
         if conf["monitoring"]["execution_trace"] :
             execution_trace = conf["monitoring"]["execution_trace"]
 
         self.addParam(Param("log_level",logging_value)) 
-        self.addParam(Param("execution_trace", execution_trace))
-        self.addParam(Param("log_directory", log_directory))
+        self.addParam(Param("stats_file", stats_file))
 
 
         # Generate device tree
