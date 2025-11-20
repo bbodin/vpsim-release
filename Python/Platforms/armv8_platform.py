@@ -56,8 +56,8 @@ class Armv8Cluster:
 
         self.dt = dt.DevTree(conf['platform_name'],conf['device_tree_template'])
 
-        if 'qemu_execution_trace' in conf["monitoring"] and conf["monitoring"]['qemu_execution_trace']:
-            trace_file = conf["monitoring"]['qemu_execution_trace']
+        if 'qemu_execution_trace_file' in conf["monitoring"] and conf["monitoring"]['qemu_execution_trace_file']:
+            trace_file = conf["monitoring"]['qemu_execution_trace_file']
             ModelProviderParam2(provider=self.q.name, option='-d', value='mmu,in_asm,int,guest_errors')
             ModelProviderParam2(provider=self.q.name, option='-D', value=trace_file)
 
@@ -711,8 +711,8 @@ class FullSystem(System):
         if conf["monitoring"]["vpsim_stats_file"] :
             stats_file = conf["monitoring"]["vpsim_stats_file"]
             
-        if conf["monitoring"]["execution_trace"] :
-            execution_trace = conf["monitoring"]["execution_trace"]
+        if conf["monitoring"]["qemu_execution_trace_file"] :
+            execution_trace = conf["monitoring"]["qemu_execution_trace_file"]
 
         self.addParam(Param("log_level",logging_value)) 
         self.addParam(Param("stats_file", stats_file))
