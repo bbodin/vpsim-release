@@ -26,8 +26,6 @@
 #include "sesam_mmap.h"
 
 /* sesam opcodes */
-#define SESAMOP                 0x00
-#define SESAMOP_SHOW            0x01
 #define SESAMOP_QUIT            0x42
 #define SESAMOP_START_BENCH     0x52
 #define SESAMOP_END_BENCH       0x54

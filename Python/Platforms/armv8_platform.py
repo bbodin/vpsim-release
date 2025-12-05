@@ -428,9 +428,11 @@ class FullSystem(System):
             provider.notify_ioaccess=False
         sysbus.n_out_ports += 1
 
+        monitor_arguments = {"size" : 4, "base_address" : conf["monitoring"]['sesam_monitor_addr'] }
+        if conf['monitoring']['sesam_monitor_log_directory'] :
+            monitor_arguments["log_directory"] = conf['monitoring']['sesam_monitor_log_directory']
 
-        sysbus >> Monitor(size=4, base_address=conf["monitoring"]['sesam_monitor_addr'], 
-                                  log_directory=conf['monitoring']['sesam_monitor_log_directory'] )
+        sysbus >> Monitor(**monitor_arguments)
 
         ModelProviderParam2(provider=provider.name,
             option='-m',
@@ -701,10 +703,10 @@ class FullSystem(System):
 
         stats_file = None
         execution_trace = None 
-        logging_value = "disabled"
+        logging_value = "disable"
 
         if conf["monitoring"]["vpsim_log_level"] :
-            logging_value = "enabled"
+            logging_value = "enable"
             if int(conf["monitoring"]["vpsim_log_level"]) :
                 logging_value = int(conf["monitoring"]["vpsim_log_level"]) 
         
@@ -714,8 +716,10 @@ class FullSystem(System):
         if conf["monitoring"]["qemu_execution_trace_file"] :
             execution_trace = conf["monitoring"]["qemu_execution_trace_file"]
 
-        self.addParam(Param("log_level",logging_value)) 
-        self.addParam(Param("stats_file", stats_file))
+        self.addParam(Param("log_level",logging_value))
+
+        if (stats_file) :
+            self.addParam(Param("stats_file", stats_file))
 
 
         # Generate device tree

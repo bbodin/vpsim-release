@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Copyright (C) 2024 Commissariat à l'énergie atomique et aux énergies alternatives (CEA)
 
@@ -14,8 +16,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from armv8_platform import FullSystem
+
 import os
+import argparse
+import sys
 
 gpp_home = os.path.join(os.environ['VPSIM_HOME'], 'GPP')
 
@@ -46,8 +50,8 @@ conf = {
 
     'ram': [
         {
-            'base': 0x40000000,
-            'size': 0x100000000
+            'base':   0x40000000,
+            'size':  0x100000000
         }
     ],
 
@@ -87,26 +91,11 @@ conf = {
         'irq': 44
     },
 
-    'sesam_monitor_addr': 0x17000000,
-
     'software': {
-       'mode': 'minimal', # minimal
-
-       'elf': [
-            # List of ELF files (absolute paths) to load into memory before simulation starts.
-       ],
-
-       'bin': [
-            # List of binaries
-       ],
-
-       'dtb': {
-           'path': os.path.join(gpp_home, 'dt', 'gpp.dtb'),
-       },
+       'mode': 'minimal',
 
        'kernel': {
-           'path': os.path.join(gpp_home, 'linux', 'linux-6.1.44'),
-           'bootargs': 'console=ttyAMA0 earlycon root=/dev/vda uio_pdrv_genirq.of_id=generic-uio ip=dhcp',
+           'path': None,
        },
 
        'entry': None # Set this to entry PC when in custom mode.
@@ -189,32 +178,186 @@ conf = {
         },
     },
 
-    # Provide a port to start in Debug mode
-    # (You then need to connect a cross-gdb to start the simulation !)
-    'gdb_port': None,
-    'log_execution': False,
-    'log_file': os.path.join(os.environ['VPSIM_HOME'],'bin','log.txt'),
+    'monitoring' : {
+        'sesam_monitor_addr': 0x17000000,
+        'sesam_monitor_log_directory' : None,
+        'gdb_port': None,
+        'vpsim_log_level' : 'info', # This is the log level of VPSIM
+        'vpsim_stats_file' : None, # This is the location of any vpsim log file
+        'qemu_execution_trace_file' : None # This is the location of the Qemu execution trace file
+    }
 }
 
-def main () :
- # Build the config
+
+def parse_arguments() -> dict:
+    parser = argparse.ArgumentParser(description="Simulate a ELF kernel.")
+    parser.add_argument('--kernel', required=True, help='Path to the kernel file')
+    parser.add_argument('--outputdir', required=False, help='Path for for output files')
+    parser.add_argument('--name', required=False, help='Prefix name for output files')
+
+    args = parser.parse_args()
+
+    kernel_file = os.path.abspath(args.kernel)
+    if not os.path.isfile(kernel_file):
+        print(f"Error: Kernel file '{kernel_file}' does not exist or is not a file.", file=sys.stderr)
+        sys.exit(1)
+    if not os.access(kernel_file, os.R_OK):
+        print(f"Error: Kernel file '{kernel_file}' is not readable.", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Kernel file '{kernel_file}' is valid.")
+
+    return {"kernel": kernel_file, "outputdir": args.outputdir, "name": args.name}
+
+def print_stats_table(data, *, path_sep="/", missing="–"):
+    """
+    Pretty-prints a nested-dict of segments as an ASCII table.
+    - Columns = top-level segments (e.g., 'globalLog', 'another', ...)
+    - Rows    = metric paths found anywhere under each segment
+               (e.g., 'cpu_0/executed_instructions', 'dcacheL1_0/hits', ...)
+
+    Values are expected to be either:
+      • dict (recurse), or
+      • tuples like (value, unit) where unit may be ''.
+
+    Parameters
+    ----------
+    data : dict
+        Top-level mapping: {segment_name: segment_dict, ...}
+    path_sep : str
+        Separator used when joining nested keys into a metric path.
+    missing : str
+        Placeholder for missing cells.
+
+    Notes
+    -----
+    - Preserves key order where possible (Python 3.7+ dicts keep insertion order).
+    - Formats tuple values as "value unit" (unit omitted if empty).
+    """
+    from math import isfinite
+
+    def _is_leaf(x):
+        return not isinstance(x, dict)
+
+    def _fmt_value(v):
+        if isinstance(v, tuple) and len(v) == 2:
+            val, unit = v
+            # format numbers nicely; leave others as-is
+            if isinstance(val, float):
+                # keep reasonable precision without trailing zeros
+                s = f"{val:.6g}"
+            else:
+                s = str(val)
+            return f"{s} {unit}".rstrip()
+        # Fallback: stringify
+        return str(v)
+
+    def _flatten(dct, prefix=""):
+        rows = []
+        for k, v in dct.items():
+            key = f"{prefix}{path_sep}{k}" if prefix else k
+            if isinstance(v, dict):
+                rows.extend(_flatten(v, key))
+            else:
+                rows.append((key, v))
+        return rows
+
+    # 1) Collect column names (segments) in insertion order
+    segments = list(data.keys())
+
+    # 2) For each segment, flatten to {metric_path: value}
+    seg_maps = []
+    for seg in segments:
+        segval = data.get(seg, {})
+        if isinstance(segval, dict):
+            flat = _flatten(segval)
+        else:
+            # if not a dict, treat the segment itself as a single leaf
+            flat = [(seg, segval)]
+        seg_maps.append({k: v for k, v in flat})
+
+    # 3) Compute unified ordered list of metric paths.
+    #    Start with the first segment's order, then append unseen keys from others in their order.
+    seen = set()
+    row_keys = []
+    for sm in seg_maps:
+        for k in sm.keys():
+            if k not in seen:
+                seen.add(k)
+                row_keys.append(k)
+
+    # 4) Build a 2D table: header + rows
+    header = ["Metric"] + segments
+
+    # Convert cell values to strings (formatted); fill missing
+    rows = []
+    for rk in row_keys:
+        row = [rk]
+        for sm in seg_maps:
+            val = sm.get(rk, None)
+            row.append(_fmt_value(val) if val is not None else missing)
+        rows.append(row)
+
+    # 5) Compute column widths
+    col_widths = [0] * len(header)
+    for ci, h in enumerate(header):
+        col_widths[ci] = max(col_widths[ci], len(h))
+    for r in rows:
+        for ci, cell in enumerate(r):
+            col_widths[ci] = max(col_widths[ci], len(str(cell)))
+
+    # 6) Helpers to render lines
+    def hline(ch="-", cross="+"):
+        parts = [cross]
+        for w in col_widths:
+            parts.append(ch * (w + 2))
+            parts.append(cross)
+        return "".join(parts)
+
+    def fmt_row(vals):
+        cells = []
+        for ci, v in enumerate(vals):
+            s = str(v)
+            pad = col_widths[ci] - len(s)
+            cells.append(f" {s}{' ' * pad} ")
+        return "|" + "|".join(cells) + "|"
+
+    # 7) Render table
+    print(hline("-","+") )
+    print(fmt_row(header))
+    print(hline("=","+") )
+    for r in rows:
+        print(fmt_row(r))
+    print(hline("-","+") )
+
+
+if __name__ == '__main__':
+
+    arguments = parse_arguments ()
+
+    # WE set the kernel here
+    conf["software"]["kernel"]["path"] = os.path.abspath(arguments["kernel"])
+
+    # About log and log files
+    conf['monitoring']['vpsim_log_level'] = None
+
+    if arguments["outputdir"] and arguments["name"] :
+        log_dir =   os.path.abspath(arguments["outputdir"])
+        trace_file =  log_dir  + "/" + arguments["name"] +  "_trace.log"
+        stats_file =  log_dir  + "/" + arguments["name"] +  "_stats.log"
+
+        conf['monitoring']['sesam_monitor_log_directory'] = log_dir
+        conf['monitoring']['vpsim_stats_file'] = stats_file
+        conf['monitoring']['qemu_execution_trace_file'] = trace_file
+    else :
+        conf['monitoring']['sesam_monitor_log_directory'] = None
+        conf['monitoring']['qemu_execution_trace_file'] = None
+        conf['monitoring']['vpsim_stats_file'] = None
+        
+
+    from armv8_platform import FullSystem
     sys = FullSystem(conf)
     # Run simulation
     stats = sys.build(simulate=True,wait=True,silent=False,)
-
-    # Print global stats at the end since the boot
-    if not stats:
-        print("No statistics were available !")
-    else:
-        instr=0
-        for component in stats:
-            print("\n==== Statistics for %s ====" % component)
-            for stat in stats[component]:
-                value, unit = stats[component][stat]
-                print("%s = %s %s" % (stat, value, unit))
-                if stat == 'executed_instructions':
-                    instr += int(stats[component][stat][0])
-        print("Total executed instructions: %s" % instr)
-
-if __name__ == '__main__':
-    main()
+    from pprint import pprint
+    print_stats_table(stats)
