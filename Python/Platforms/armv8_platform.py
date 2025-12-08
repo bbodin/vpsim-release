@@ -54,7 +54,9 @@ class Armv8Cluster:
         ModelProviderParam2(provider=self.q.name, option='-monitor', value='none')
         ModelProviderParam1(provider=self.q.name, option='-semihosting')
 
-        self.dt = dt.DevTree(conf['platform_name'],conf['device_tree_template'])
+        if 'device_tree_template' in conf :
+            self.dt = dt.DevTree(conf['platform_name'],conf['device_tree_template'])
+
 
         if 'qemu_execution_trace_file' in conf["monitoring"] and conf["monitoring"]['qemu_execution_trace_file']:
             trace_file = conf["monitoring"]['qemu_execution_trace_file']
@@ -146,7 +148,8 @@ class Armv8Cluster:
         for c in conf['cpu']['gic']:
             dt_conf[c] = conf['cpu']['gic'][c]
 
-        dt.c_arm64(dt_conf, self.dt.getref())
+        if hasattr(self,"dt") :
+            dt.c_arm64(dt_conf, self.dt.getref())
 
 class NodeCluster:
     '''
@@ -264,7 +267,9 @@ class FullSystem(System):
         self.cluster = Armv8Cluster(conf)
         sysbus = self.cluster.sysbus
         provider = self.cluster.q
-        self.dt = self.cluster.dt
+        
+        if hasattr(self,"dt") :
+            self.dt = self.cluster.dt
 
         # Create main memory
         ram_size=0
@@ -283,7 +288,8 @@ class FullSystem(System):
             ram_spaces.append(self.ram)
             self.ram.channels=1
             self.ram.channel_width=8
-            dt.c_memory(ram,self.dt.getref())
+            if hasattr(self,"dt") :
+                dt.c_memory(ram,self.dt.getref())
 
         # Instruction caches
         for core in self.cluster.cores:
@@ -461,7 +467,9 @@ class FullSystem(System):
                 ModelProviderParam2(provider=provider.name,
                     option='-serial',
                     value='mon:stdio')
-                dt.c_pl11_uart(uart, self.dt.getref())
+                    
+                if hasattr(self,"dt") :
+                    dt.c_pl11_uart(uart, self.dt.getref())
                 uart=ModelProviderDev(uart['name'],provider=provider.name,
                     model='pl011',
                     base_address=uart['base'],
@@ -488,7 +496,8 @@ class FullSystem(System):
                 size=net['size'],
                 irq=net['irq'])
 
-            dt.c_virtio(net, self.dt.getref())
+            if hasattr(self,"dt") :
+                dt.c_virtio(net, self.dt.getref())
 
             # if 'mac' not in net:
             #     net['mac']="54:54:00:12:34:58"
@@ -647,7 +656,9 @@ class FullSystem(System):
                 size=0x1000,
                 irq=conf['rtc']['irq'])
             conf['rtc']['size']=0x1000
-            dt.c_pl031(conf['rtc'], self.dt.getref())
+            
+            if hasattr(self,"dt") :
+                dt.c_pl031(conf['rtc'], self.dt.getref())
 
         if 'flash' in conf:
             for i,fl in enumerate(conf['flash']):
@@ -723,7 +734,9 @@ class FullSystem(System):
 
 
         # Generate device tree
-        self.dt.make()
+        
+        if hasattr(self,"dt") :
+            self.dt.make()
 
         # Export sysbus for extensions
         self.sysbus = sysbus
