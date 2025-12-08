@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import time
 import os
 import subprocess
 import re
@@ -260,7 +261,7 @@ class System:
 
         self.config.append(param)
 
-    def build(self, fmts=["xml"], output=True, simulate=False, wait=True, silent=True, outstream=''):
+    def build(self, fmts=["xml"], output=True, simulate=False, wait=True, silent=True, outstream='', timeout_sec=None):
         buildsets={}
         for f in fmts:
             buildsets[f]=[]
@@ -312,9 +313,9 @@ class System:
 
             if simulate:
                 if wait:
-                    return self.__simulate(buildsets[f], silent, outstream).stats
+                    return self.__simulate(buildsets[f], silent, outstream,timeout_sec).stats
                 else:
-                    self.__fut=_Ex.submit(self.__simulate, buildsets[f], silent, outstream)
+                    self.__fut=_Ex.submit(self.__simulate, buildsets[f], silent, outstream,timeout_sec)
                     _ActF.append(self.__fut)
 
     def done(self):
@@ -323,7 +324,7 @@ class System:
     def waitStats(self):
         return self.__fut.result().stats
 
-    def __simulate(self, bs, silent, outstream):
+    def __simulate(self, bs, silent, outstream, timeout_sec=None):
         dateTime = datetime.now().isoformat(timespec='seconds')
         working_dir='.%s%s--%s' % (self.name, dateTime, threading.current_thread().ident)
         os.makedirs(working_dir,exist_ok=True)
@@ -336,18 +337,37 @@ class System:
             else:
                 outdev=subprocess.DEVNULL
         else: outdev=None
+
         try:
             print (f"working_dir is {working_dir}")
             print ("Running command:",[_ve, '--run', 'tmp.xml'])
             p=subprocess.Popen([_ve, '--run', 'tmp.xml'],
                 cwd=working_dir,stdout=outdev,stderr=outdev, )
-            try:
-                p.wait()
-            except KeyboardInterrupt:
-                print("forwarding term signal to child.")
-                p.terminate()
         except subprocess.SubprocessError:
             print("ERROR while running subprocess")
+
+        start_time = time.time()
+        while True:
+            ret = p.poll()
+            if ret is not None:
+                # process finished
+                break
+            if timeout_sec is not None and (time.time() - start_time) > timeout_sec:
+                print(f"TIMEOUT: VPSIM simulation exceeded {timeout_sec} seconds. Terminating...")
+                p.terminate()
+                try:
+                    p.wait(5)
+                except subprocess.TimeoutExpired:
+                    p.kill()
+                print("VPSIM simulation timed out")
+            time.sleep(0.1)
+
+
+        # try:
+        #     p.wait()
+        # except KeyboardInterrupt:
+        #     print("forwarding term signal to child.")
+        #     p.terminate()
 
         self.stats={}
         for logf in [f for f in os.listdir(working_dir) if os.path.splitext(f)[1]==".log"]:
